@@ -14,6 +14,15 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urldefrag
 from readability import Document
+from dotenv import load_dotenv
+import os
+
+load_dotenv(override=True)
+
+openai_api_key = os.getenv('OPENAI_API_KEY')
+openai_project_id = os.getenv('OPENAI_PROJECT_ID')
+google_search_api_key = os.getenv('GOOGLE_SEARCH_API_KEY')
+google_search_cse_id = os.getenv('GOOGLE_SEARCH_CSE_ID')
 
 
 client = OpenAI()
@@ -144,14 +153,11 @@ def crawl(url, max_depth=2, depth=0):
 
     return results
 
-API_KEY = "AIzaSyALuDpzOPdjCt82Ey9qeMurruHYhR_kOqU"
-CSE_ID = "64e176914e0b7409a"
-
 def google_search(query, num=5):
     url = "https://www.googleapis.com/customsearch/v1"
     params = {
-        "key": API_KEY,
-        "cx": CSE_ID,
+        "key": google_search_api_key,
+        "cx": google_search_cse_id,
         "q": query,
         "num": num
     }
