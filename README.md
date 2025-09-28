@@ -47,3 +47,7 @@ minikube delete
 
 curl -v http://192.168.1.140:5000/v2/
 minikube ssh "curl -v http://192.168.1.140:5000/v2/"
+
+## run act locally
+
+act workflow_dispatch -W .github/workflows/deploy.yml --secret-file .secrets -s CLOUD=local
