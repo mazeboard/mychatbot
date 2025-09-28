@@ -35,13 +35,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Cloud auth
-      - name: Cloud auth (Azure)
-        uses: ./.github/workflows/auth-azure.yml@main
-
       # Context setup
-      - name: Context (Azure)
-        uses: ./.github/workflows/context-azure.yml@main
+      - name: Context (local)
+        uses: ./.github/actions/context-local
 
       # Deployment of docker images to k8s cluster
       - name: Deploy Milvus (Helm)
@@ -50,7 +46,7 @@ jobs:
           helm repo update
           helm upgrade --install milvus milvus/milvus \
             --namespace milvus --create-namespace \
-            -f k8s/milvus-azure-values.yaml
+            -f k8s/milvus-local-values.yaml
 
       - name: Deploy ai-service
         run: |
