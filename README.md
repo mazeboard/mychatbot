@@ -50,4 +50,14 @@ minikube ssh "curl -v http://192.168.1.140:5000/v2/"
 
 ## run act locally
 
-act workflow_dispatch -W .github/workflows/deploy.yml --secret-file .secrets
+kubectl config view --minify --flatten --raw > ~/.kube/config-embedded
+
+sudo act workflow_dispatch \
+  -W .github/workflows/deploy-local.yml \
+  --secret-file .secrets \
+  --container-options "--privileged -u root -v $HOME/.kube/config-embedded:/kube/config" \
+  -P ubuntu-latest=catthehacker/ubuntu:full-latest
+
+## List docker images in registry
+
+curl http://192.168.1.140:5000/v2/_catalog
