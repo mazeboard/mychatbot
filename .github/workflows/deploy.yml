@@ -5,13 +5,21 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      cloud:
+        type: choice
+        default: local
+        options: [local, azure, aws, gcp]
+
+env:
+  CLOUD: ${{ github.event.inputs.cloud || 'azure' }}
 
 jobs:
   pre-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Display CLOUD PROVIDER
-        run: echo "CLOUD is ${{ secrets.CLOUD }}"
+        run: echo "CLOUD is ${{ env.CLOUD }}"
   build:
     runs-on: ubuntu-latest
     outputs:
@@ -40,11 +48,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cloud auth
-        uses: ./.github/actions/auth-${{ secrets.CLOUD }}
+      # Cloud auth "switch"
+      - name: Cloud auth (Azure)
+        if: ${{ env.CLOUD == 'azure' }}
+        uses: ./.github/actions/auth-azure
 
-      - name: Create k8s context
-        uses: ./.github/actions/context-${{ secrets.CLOUD }}
+      - name: Cloud auth (AWS)
+        if: ${{ env.CLOUD == 'aws' }}
+        uses: ./.github/actions/auth-aws
+
+      - name: Cloud auth (GCP)
+        if: ${{ env.CLOUD == 'gcp' }}
+        uses: ./.github/actions/auth-gcp
+
+      - name: Cloud auth (Local)
+        if: ${{ env.CLOUD == 'local' }}
+        uses: ./.github/actions/auth-local
+
+      # Context "switch"
+      - name: Context (Azure)
+        if: ${{ env.CLOUD == 'azure' }}
+        uses: ./.github/actions/context-azure
+
+      - name: Context (AWS)
+        if: ${{ env.CLOUD == 'aws' }}
+        uses: ./.github/actions/context-aws
+
+      - name: Context (GCP)
+        if: ${{ env.CLOUD == 'gcp' }}
+        uses: ./.github/actions/context-gcp
+
+      - name: Context (Local)
+        if: ${{ env.CLOUD == 'local' }}
+        uses: ./.github/actions/context-local
 
       - name: Deploy Milvus (Helm)
         run: |
@@ -52,7 +88,7 @@ jobs:
           helm repo update
           helm upgrade --install milvus milvus/milvus \
             --namespace milvus --create-namespace \
-            -f k8s/milvus-${{ secrets.CLOUD || 'local' }}-values.yaml
+            -f k8s/milvus-${{ env.CLOUD || 'local' }}-values.yaml
 
       - name: Deploy ai-service
         run: |
