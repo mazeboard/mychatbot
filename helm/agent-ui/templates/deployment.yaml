@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-ui
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: agent-ui
+  template:
+    metadata:
+      labels:
+        app: agent-ui
+    spec:
+      containers:
+        - name: agent-ui
+          image: "{{ .Values.registry }}/agent-ui:{{ .Values.tag }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - containerPort: 3000
+

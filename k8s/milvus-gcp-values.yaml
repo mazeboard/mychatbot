@@ -1,0 +1,30 @@
+# Milvus Production on GCP GCS
+cluster:
+  enabled: false
+
+etcd:
+  enabled: true
+  replicaCount: 3
+
+minio:
+  enabled: false
+
+externalStorage:
+  enabled: true
+  type: gcs
+  bucketName: my-milvus-bucket # <-- replace
+  rootPath: milvus-data
+  accessKey: ${GCP_ACCESS_KEY_ID} # <-- better via Secret
+  secretKey: ${GCP_SECRET_ACCESS_KEY} # <-- better via Secret
+
+persistence:
+  enabled: true
+  size: 50Gi
+
+resources:
+  requests:
+    cpu: "2"
+    memory: 4Gi
+  limits:
+    cpu: "4"
+    memory: 8Gi

@@ -1,0 +1,30 @@
+# Milvus Production on Azure Blob
+cluster:
+  enabled: false
+
+etcd:
+  enabled: true
+  replicaCount: 3
+
+minio:
+  enabled: false
+
+externalStorage:
+  enabled: true
+  type: azureblob
+  bucketName: my-milvus-container # Azure Blob container
+  rootPath: milvus-data
+  accessKey: ${AZURE_STORAGE_ACCOUNT_NAME} # <-- better via Secret
+  secretKey: ${AZURE_STORAGE_ACCOUNT_KEY} # <-- better via Secret
+
+persistence:
+  enabled: true
+  size: 50Gi
+
+resources:
+  requests:
+    cpu: "2"
+    memory: 4Gi
+  limits:
+    cpu: "4"
+    memory: 8Gi

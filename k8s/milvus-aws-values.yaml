@@ -1,0 +1,32 @@
+# Milvus Production on AWS S3
+cluster:
+  enabled: false # standalone; set true for distributed
+
+etcd:
+  enabled: true
+  replicaCount: 3
+
+minio:
+  enabled: false # disable MinIO
+
+externalS3:
+  enabled: true
+  host: s3.amazonaws.com
+  port: 443
+  useSSL: true
+  bucketName: my-milvus-bucket # <-- replace
+  rootPath: milvus-data
+  accessKey: ${AWS_ACCESS_KEY_ID} # <-- better via Secret
+  secretKey: ${AWS_SECRET_ACCESS_KEY} # <-- better via Secret
+
+persistence:
+  enabled: true
+  size: 50Gi
+
+resources:
+  requests:
+    cpu: "2"
+    memory: 4Gi
+  limits:
+    cpu: "4"
+    memory: 8Gi

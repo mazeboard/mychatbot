@@ -1,0 +1,18 @@
+name: Authenticate to Azure AKS
+
+on:
+  workflow_call:
+
+jobs:
+  auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set AKS context
+        uses: azure/aks-set-context@v3
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
+          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
+
+      - name: Verify kubectl
+        run: kubectl get nodes
