@@ -1,0 +1,9 @@
+replicaCount: 1
+registry: myregistry
+tag: latest
+imagePullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+

@@ -79,34 +79,6 @@ app = FastAPI(lifespan=lifespan)
 embed_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 # --- Utilities ---
-def _split_text(text, max_tokens=100):
-    sentences = sent_tokenize(text)
-    chunks = []
-    chunk = ""
-    chunk_tokens = 0
-    start_idx = 0
-    current_idx = 0
-
-    for sent in sentences:
-        tokens = len(sent.split())
-        if chunk_tokens + tokens > max_tokens:
-            end_idx = current_idx
-            if chunk.strip():
-                chunks.append((start_idx, end_idx, chunk.strip()))
-            chunk = sent
-            chunk_tokens = tokens
-            start_idx = current_idx
-        else:
-            if chunk:
-                chunk += " " + sent
-            else:
-                chunk = sent
-            chunk_tokens += tokens
-        current_idx += len(sent) + 1
-    if chunk:
-        chunks.append((start_idx, len(text), chunk.strip()))
-    return chunks
-
 def split_text(text):
     sentences = sent_tokenize(text)
     chunks = []
@@ -118,8 +90,36 @@ def split_text(text):
         idx = end_idx
     return chunks
 
+""" # Example using FAISS
+import faiss
+
+# To use embeddings from OpenAI
 def embed(texts):
-    return embed_model.encode(texts, convert_to_numpy=True)
+    response = client.embeddings.create(
+        model="text-embedding-3-small",  # or "text-embedding-3-large"
+        input=texts
+    )
+    # Extract embedding vectors
+    return np.array([item.embedding for item in response.data], dtype="float32")
+
+# Embedding model (you can also use OpenAI embeddings here)
+embed_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
+embeddings = embed_model.encode(texts, convert_to_numpy=True)
+
+# dimension = length of each embedding vector
+dimension = embeddings.shape[1]
+
+index = faiss.IndexFlatL2(dimension)  # L2 distance metric
+index.add(np.array(embeddings))       # add embeddings to index
+
+query = "Which framework helps build AI apps?"
+query_vector = embed_model.encode([query])
+
+# Search top-2 most similar docs
+k = 2
+distances, indices = index.search(np.array(query_vector), k)
+"""
 
 visited=set()
 
@@ -195,7 +195,7 @@ async def ingest(file: UploadFile):
 
     chunks = split_text(text)
     texts = [c[2] for c in chunks]
-    embeddings = embed(texts)
+    embeddings = embed_model.encode(texts, convert_to_numpy=True)
 
     entities = [
         [str(uuid.uuid4()) for _ in chunks],             # id

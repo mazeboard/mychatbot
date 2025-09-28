@@ -1,0 +1,23 @@
+name: local context setup
+
+# this workflow sets up the kube context for local minikube usage
+# and is called from deploy-local.yml
+
+on:
+  workflow_call:
+
+jobs:
+  auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set local context
+      - name: Copy kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          cp $GITHUB_WORKSPACE/.kube/config ~/.kube/config
+          chmod 600 ~/.kube/config
+          echo "KUBECONFIG set for local kube"
+          kubectl config use-context minikube || true # is this necessary ?
+
+      - name: Verify kubectl
+        run: kubectl get nodes

@@ -1,0 +1,17 @@
+name: Authenticate to AWS EKS
+
+on:
+  workflow_call:
+
+jobs:
+  auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set EKS context
+        uses: aws-actions/eks-update-kubeconfig@v1
+        with:
+          cluster-name: ${{ secrets.EKS_CLUSTER_NAME }}
+          region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify kubectl
+        run: kubectl get nodes

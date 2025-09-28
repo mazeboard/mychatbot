@@ -1,0 +1,11 @@
+cluster:
+  enabled: false # standalone mode
+
+etcd:
+  enabled: true
+
+minio:
+  enabled: true
+
+persistence:
+  enabled: false

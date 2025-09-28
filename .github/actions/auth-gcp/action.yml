@@ -1,0 +1,13 @@
+name: Authenticate to GCP GKE
+
+on:
+  workflow_call:
+
+jobs:
+  auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}

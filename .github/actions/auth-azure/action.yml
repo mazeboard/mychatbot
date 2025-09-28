@@ -1,0 +1,13 @@
+name: Authenticate to Azure AKS
+
+on:
+  workflow_call:
+
+jobs:
+  auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
