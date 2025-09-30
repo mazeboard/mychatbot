@@ -14,10 +14,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urldefrag
 from readability import Document
-from dotenv import load_dotenv
 import os
-
-load_dotenv(override=True)
 
 openai_api_key = os.getenv('OPENAI_API_KEY')
 openai_project_id = os.getenv('OPENAI_PROJECT_ID')
@@ -27,8 +24,11 @@ google_search_cse_id = os.getenv('GOOGLE_SEARCH_CSE_ID')
 
 client = OpenAI()
 
+milvus_host = os.getenv("MILVUS_HOST", "localhost")
+milvus_port = int(os.getenv("MILVUS_PORT", "19530"))
+
 # 🔗 Connect to Milvus
-connections.connect("default", host="localhost", port="19530")
+connections.connect("default", host=milvus_host, port=milvus_port)
 
 # Define collection schema
 collection_name = "documents"
@@ -296,7 +296,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"], # Adjust as needed
+    allow_origins=[f"http://localhost:3000"], # Adjust as needed
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
