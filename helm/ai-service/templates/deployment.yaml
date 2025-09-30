@@ -14,8 +14,38 @@ spec:
     spec:
       containers:
         - name: ai-service
-          image: "{{ .Values.registry }}/ai-service:{{ .Values.tag }}"
+          image: "{{ if .Values.registry }}{{ .Values.registry }}/{{ end }}ai-service:{{ .Values.tag }}"
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           ports:
-            - containerPort: 8000
-
+            - containerPort: {{ .Values.service.port }}
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ai-service-secrets
+                  key: OPENAI_API_KEY
+            - name: OPENAI_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ai-service-secrets
+                  key: OPENAI_PROJECT_ID
+            - name: GOOGLE_SEARCH_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ai-service-secrets
+                  key: GOOGLE_SEARCH_API_KEY
+            - name: GOOGLE_SEARCH_CSE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ai-service-secrets
+                  key: GOOGLE_SEARCH_CSE_ID
+            - name: MILVUS_HOST
+              value: "{{ .Values.milvus.host }}"
+            - name: MILVUS_PORT
+              value: "{{ .Values.milvus.port }}"
+            - name: AI_SERVICE_PORT
+              value: "{{ .Values.service.port }}"
+            - name: AGENT_UI_HOST
+              value: "{{ .Values.agent.host }}"
+            - name: AGENT_UI_PORT
+              value: "{{ .Values.agent.port }}"

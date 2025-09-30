@@ -11,7 +11,7 @@ python-multipart
 gunicorn
 nltk
 pymilvus
-fitz
+PyMuPDF
 requests
 beautifulsoup4
 readability-lxml

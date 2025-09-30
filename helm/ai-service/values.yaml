@@ -1,9 +1,21 @@
 replicaCount: 1
-registry: myregistry
+
+# Image settings
+registry: ""
 tag: latest
 imagePullPolicy: IfNotPresent
 
+# Milvus connection (used in env vars)
+milvus:
+  host: milvus.milvus.svc.cluster.local
+  port: 19530
+
+# Agent connection (used in env vars)
+agent:
+  host: agent-ui.agent-ui.svc.cluster.local
+  port: "{{ .Values.global.agentUi.port }}"
+
+# Kubernetes Service
 service:
   type: ClusterIP
-  port: 8000
-
+  port: "{{ .Values.global.aiService.port }}"

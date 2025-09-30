@@ -1,9 +1,14 @@
 replicaCount: 1
-registry: myregistry
+registry: ""
 tag: latest
 imagePullPolicy: IfNotPresent
 
+# ai-service connection
+aiService:
+  host: ai-service.ai-service.svc.cluster.local
+  port: "{{ .Values.global.aiService.port }}"
+
+# Kubernetes Service
 service:
   type: ClusterIP
-  port: 3000
-
+  port: "{{ .Values.global.agentUi.port }}"

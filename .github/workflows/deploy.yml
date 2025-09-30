@@ -43,6 +43,15 @@ jobs:
       - name: Context (Azure)
         uses: ./.github/workflows/context-azure.yml@main
 
+      - name: Create/Update Kubernetes Secrets
+        run: |
+          kubectl create secret generic ai-service-secrets \
+            --from-literal=OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+            --from-literal=OPENAI_PROJECT_ID=${{ secrets.OPENAI_PROJECT_ID }} \
+            --from-literal=GOOGLE_SEARCH_API_KEY=${{ secrets.GOOGLE_SEARCH_API_KEY }} \
+            --from-literal=GOOGLE_SEARCH_CSE_ID=${{ secrets.GOOGLE_SEARCH_CSE_ID }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       # Deployment of docker images to k8s cluster
       - name: Deploy Milvus (Helm)
         run: |
@@ -57,6 +66,7 @@ jobs:
           helm upgrade --install ai-service ./helm/ai-service \
             --set registry=${{ secrets.REGISTRY_URL }} \
             --set tag=${{ needs.build.outputs.image_tag }}
+
 
       - name: Deploy agent-ui
         run: |
