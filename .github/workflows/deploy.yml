@@ -58,12 +58,13 @@ jobs:
           helm repo add milvus https://milvus-io.github.io/milvus-helm/
           helm repo update
           helm upgrade --install milvus milvus/milvus \
-            --namespace milvus --create-namespace \
+            --namespace mychatbot --create-namespace \
             -f k8s/milvus-azure-values.yaml
 
       - name: Deploy ai-service
         run: |
           helm upgrade --install ai-service ./helm/ai-service \
+            --namespace mychatbot \
             --set registry=${{ secrets.REGISTRY_URL }} \
             --set tag=${{ needs.build.outputs.image_tag }}
 
@@ -71,8 +72,6 @@ jobs:
       - name: Deploy agent-ui
         run: |
           helm upgrade --install agent-ui ./helm/agent-ui \
+            --namespace mychatbot \
             --set registry=${{ secrets.REGISTRY_URL }} \
             --set tag=${{ needs.build.outputs.image_tag }}
-
-      - name: Apply ingress
-        run: kubectl apply -f k8s/ingress.yml

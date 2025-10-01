@@ -6,9 +6,22 @@ imagePullPolicy: IfNotPresent
 # ai-service connection
 aiService:
   host: ai-service.ai-service.svc.cluster.local
-  port: "{{ .Values.global.aiService.port }}"
+  port: 8000
 
 # Kubernetes Service
 service:
   type: ClusterIP
-  port: "{{ .Values.global.agentUi.port }}"
+  port: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: ui.mychatbot.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: ui-mychatbot-tls
+      hosts:
+        - ui.mychatbot.com

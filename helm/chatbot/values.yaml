@@ -1,7 +1,0 @@
-aiService:
-  host: ai-service
-  port: 8000
-
-agentUi:
-  host: agent-ui
-  port: 3000

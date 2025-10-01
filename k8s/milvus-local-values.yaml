@@ -1,0 +1,10 @@
+cluster:
+  enabled: false
+
+etcd:
+  enabled: true
+  replicaCount: 1
+
+minio:
+  enabled: true
+  replicaCount: 1
