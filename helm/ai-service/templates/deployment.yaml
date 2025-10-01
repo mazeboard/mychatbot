@@ -45,7 +45,3 @@ spec:
               value: "{{ .Values.milvus.port }}"
             - name: AI_SERVICE_PORT
               value: "{{ .Values.service.port }}"
-            - name: AGENT_UI_HOST
-              value: "{{ .Values.agent.host }}"
-            - name: AGENT_UI_PORT
-              value: "{{ .Values.agent.port }}"

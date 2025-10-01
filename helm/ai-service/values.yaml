@@ -10,12 +10,7 @@ milvus:
   host: milvus.milvus.svc.cluster.local
   port: 19530
 
-# Agent connection (used in env vars)
-agent:
-  host: agent-ui.agent-ui.svc.cluster.local
-  port: "{{ .Values.global.agentUi.port }}"
-
 # Kubernetes Service
 service:
   type: ClusterIP
-  port: "{{ .Values.global.aiService.port }}"
+  port: 8000
