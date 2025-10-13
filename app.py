@@ -18,8 +18,6 @@ import os
 
 openai_api_key = os.getenv('OPENAI_API_KEY')
 openai_project_id = os.getenv('OPENAI_PROJECT_ID')
-google_search_api_key = os.getenv('GOOGLE_SEARCH_API_KEY')
-google_search_cse_id = os.getenv('GOOGLE_SEARCH_CSE_ID')
 
 
 client = OpenAI()
@@ -36,7 +34,7 @@ dim = 384  # depends on embedding model (MiniLM has 384)
 
 fields = [
     FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, auto_id=False, max_length=64),
-    FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=dim),
+    FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=dim),
     FieldSchema(name="chunk", dtype=DataType.VARCHAR, max_length=2000),
     FieldSchema(name="start", dtype=DataType.INT64),
     FieldSchema(name="end", dtype=DataType.INT64),
@@ -62,7 +60,7 @@ index_params = {
     "params": {"nlist": 128},
 }
 
-idx = Index(collection, "embedding", index_params=index_params)
+idx = Index(collection, "vector", index_params=index_params)
 
 async def lifespan(app: FastAPI):
     # Startup code
@@ -89,101 +87,6 @@ def split_text(text):
         chunks.append((idx, end_idx, sent))
         idx = end_idx
     return chunks
-
-""" # Example using FAISS
-import faiss
-
-# To use embeddings from OpenAI
-def embed(texts):
-    response = client.embeddings.create(
-        model="text-embedding-3-small",  # or "text-embedding-3-large"
-        input=texts
-    )
-    # Extract embedding vectors
-    return np.array([item.embedding for item in response.data], dtype="float32")
-
-# Embedding model (you can also use OpenAI embeddings here)
-embed_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-
-embeddings = embed_model.encode(texts, convert_to_numpy=True)
-
-# dimension = length of each embedding vector
-dimension = embeddings.shape[1]
-
-index = faiss.IndexFlatL2(dimension)  # L2 distance metric
-index.add(np.array(embeddings))       # add embeddings to index
-
-query = "Which framework helps build AI apps?"
-query_vector = embed_model.encode([query])
-
-# Search top-2 most similar docs
-k = 2
-distances, indices = index.search(np.array(query_vector), k)
-"""
-
-visited=set()
-
-def crawl(url, max_depth=2, depth=0):
-    if depth > max_depth or url in visited:
-        return []
-    visited.add(url)
-
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-    except Exception as e:
-        print(f"Failed to fetch {url}: {e}")
-        return []
-
-    # Extract readable text
-    doc = Document(response.text)
-    text = doc.summary()
-    soup = BeautifulSoup(text, "html.parser")
-    page_text = soup.get_text(separator=" ", strip=True)
-
-    results = [(url, page_text)]
-
-    # Extract links
-    soup_links = BeautifulSoup(response.text, "html.parser")
-    for link in soup_links.find_all("a", href=True):
-        next_url = urljoin(url, link["href"])
-        next_url = urldefrag(next_url).url  # remove #anchors
-        if next_url.startswith("http"):
-            results.extend(crawl(next_url, max_depth, depth + 1))
-
-    return results
-
-def google_search(query, num=5):
-    url = "https://www.googleapis.com/customsearch/v1"
-    params = {
-        "key": google_search_api_key,
-        "cx": google_search_cse_id,
-        "q": query,
-        "num": num
-    }
-    response = requests.get(url, params=params)
-    response.raise_for_status()
-    data = response.json()
-    results = []
-    for item in data.get("items", []):
-        results.append({
-            "title": item.get("title"),
-            "link": item.get("link"),
-            "snippet": item.get("snippet")
-        })
-    return results
-
-# --- API ---
-class GoogleQueryRequest(BaseModel):
-    query: str
-    num: int = 5
-
-@app.post("/search_google")
-async def search_google(req: GoogleQueryRequest):
-    query = req.query
-    num = req.num
-    results = google_search(query, num)
-    return {"query": query, "results": results}
 
 @app.post("/ingest")
 async def ingest(file: UploadFile):
@@ -255,7 +158,7 @@ async def search(req: QueryRequest):
     query_vec = embed_model.encode([question], convert_to_numpy=True)[0]
     results = collection.search(
         data=[query_vec.tolist()],
-        anns_field="embedding",
+        anns_field="vector",
         param={"metric_type": "IP", "params": {"nprobe": 10}},
         limit=top_k * 3,
         output_fields=["chunk"]
@@ -290,17 +193,21 @@ async def search(req: QueryRequest):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "indexed": (embed_array.shape[0] if embed_array is not None else 0)}
+    return {"status": "ok", "collection": collection_name, "count": collection.num_entities}
 
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[f"http://localhost:3000"], # Adjust as needed
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Path to React build
+build_dir = os.path.join(os.path.dirname(__file__), "build")
+
+# Mount static assets (JS, CSS, etc.)
+app.mount("/static", StaticFiles(directory=os.path.join(build_dir, "static")), name="static")
+
+# Serve React index.html at root
+@app.get("/{full_path:path}")
+async def serve_react(full_path: str):
+    return FileResponse(os.path.join(build_dir, "index.html"))
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=False)

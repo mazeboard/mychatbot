@@ -18,6 +18,8 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    networks:
+      - milvus-network
 
   minio:
     container_name: milvus-minio
@@ -34,6 +36,8 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    networks:
+      - milvus-network
 
   milvus:
     container_name: milvus-standalone
@@ -51,39 +55,49 @@ services:
       - etcd
       - minio
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:19530"]
+      interval: 10s
+      timeout: 5s
       retries: 5
+    networks:
+      - milvus-network
 
-  ai-service:
-    container_name: ai-service
+  attu:
+    container_name: milvus-attu
+    image: zilliz/attu:latest
+    environment:
+      # Connect to Milvus via service name (same network)
+      MILVUS_URL: milvus:19530
+    ports:
+      - "3000:3000"
+    depends_on:
+      - milvus
+    networks:
+      - milvus-network
+
+  mychatbot:
+    container_name: mychatbot
     build:
-      context: ./ai-service
+      context: ./
       args:
         DEBUG: ${DEBUG}   # <-- read from .env
-    image: ai-service:latest
+    image: mychatbot:latest
     environment:
+      - SEMANTIC_LLM_MODEL_PATH=${SEMANTIC_LLM_MODEL_PATH}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_PROJECT_ID=${OPENAI_PROJECT_ID}
-      - GOOGLE_SEARCH_CSE_ID=${GOOGLE_SEARCH_CSE_ID}
-      - GOOGLE_SEARCH_API_KEY=${GOOGLE_SEARCH_API_KEY}
       - MILVUS_HOST=milvus
       - MILVUS_PORT=19530
+    volumes:
+      - ./models:/models
     ports:
-      - "${AI_SERVICE_PORT:-8000}:8000"
+      - "${MYCHATBOT_PORT:-8000}:8000"
     depends_on:
       milvus:
         condition: service_healthy
 
-  agent-ui:
-    container_name: agent-ui
-    build:
-      context: ./agent-ui
-      args:
-        DEBUG: ${DEBUG}   # <-- read from .env
-    image: agent-ui:latest
-    ports:
-      - "${AGENT_UI_PORT:-80}:80"
-    depends_on:
-      - ai-service
+
+networks:
+  milvus-network:
+    driver: bridge
+    

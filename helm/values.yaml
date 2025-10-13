@@ -13,4 +13,4 @@ milvus:
 # Kubernetes Service
 service:
   type: ClusterIP
-  port: 8000
+  port: 8000 # external service port

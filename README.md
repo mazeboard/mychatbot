@@ -5,6 +5,10 @@
 . scripts/load_env.sh
 docker compose up --build
 
+## ingest document
+
+curl -X POST "http://localhost:8000/ingest" -F "file=@/home/taoufik/Downloads/Profile.pdf"
+
 ## run locally using kubernetes
 
 ./scripts/run_kube.sh

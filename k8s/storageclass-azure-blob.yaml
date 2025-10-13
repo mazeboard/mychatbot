@@ -1,0 +1,14 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: azure-blob
+provisioner: blob.csi.azure.com
+parameters:
+  containerName: models
+  storageAccount: mystorageaccount
+  resourceGroup: myresourcegroup
+  secretName: azure-blob-secret
+  secretNamespace: default
+  mountOptions: ["-o allow_other"]
+reclaimPolicy: Retain
+volumeBindingMode: Immediate

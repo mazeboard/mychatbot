@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
-metadata:
-  name: ai-service
+metadata:mychatbot
+  name: 
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: ai-service
+      app: mychatbot
   template:
     metadata:
       labels:
-        app: ai-service
+        app: mychatbot
     spec:
       containers:
-        - name: ai-service
-          image: "{{ if .Values.registry }}{{ .Values.registry }}/{{ end }}ai-service:{{ .Values.tag }}"
+        - name: mychatbot
+          image: "{{ if .Values.registry }}{{ .Values.registry }}/{{ end }}mychatbot:{{ .Values.tag }}"
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           ports:
             - containerPort: {{ .Values.service.port }}
@@ -22,26 +22,23 @@ spec:
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: ai-service-secrets
+                  name: mychatbot-secrets
                   key: OPENAI_API_KEY
             - name: OPENAI_PROJECT_ID
               valueFrom:
                 secretKeyRef:
-                  name: ai-service-secrets
+                  name: mychatbot-secrets
                   key: OPENAI_PROJECT_ID
-            - name: GOOGLE_SEARCH_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: ai-service-secrets
-                  key: GOOGLE_SEARCH_API_KEY
-            - name: GOOGLE_SEARCH_CSE_ID
-              valueFrom:
-                secretKeyRef:
-                  name: ai-service-secrets
-                  key: GOOGLE_SEARCH_CSE_ID
             - name: MILVUS_HOST
               value: "{{ .Values.milvus.host }}"
             - name: MILVUS_PORT
               value: "{{ .Values.milvus.port }}"
-            - name: AI_SERVICE_PORT
-              value: "{{ .Values.service.port }}"
+            - name: SEMANTIC_LLM_MODEL_PATH
+              value: /models/llama-2-7b-chat.Q4_K_M.gguf
+          volumeMounts:
+            - name: models
+              mountPath: /models
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: models-pvc

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: models-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azure-blob
+  resources:
+    requests:
+      storage: 100Gi
