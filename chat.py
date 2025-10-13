@@ -27,6 +27,10 @@ from sentence_transformers import CrossEncoder
 from llama_cpp import Llama
 from langdetect import detect
 
+embedding_model_name = os.getenv("EMBEDDING_MODEL_NAME","text-embedding-3-small")
+llm_model_name = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
+cross_encoder_name_or_path=os.getenv("CROSS_ENCODER_NAME_OR_PATH", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+
 # =====================
 # FastAPI setup
 # =====================
@@ -44,7 +48,7 @@ openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Create embedding vector dimension dynamically
 test_embedding = openai_client.embeddings.create(
-    model="text-embedding-3-small", input="test"
+    model=embedding_model_name, input="test"
 )
 embedding_dim = len(test_embedding.data[0].embedding)
 
@@ -63,14 +67,14 @@ collection = Collection(name=collection_name)
 # =====================
 # Models
 # =====================
-reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+reranker = CrossEncoder(cross_encoder_name_or_path)
 
 # =====================
 # Embedding + Retrieval Utils
 # =====================
 def embed_texts(texts: List[str]) -> List[List[float]]:
     """Get embeddings directly via OpenAI API"""
-    res = openai_client.embeddings.create(model="text-embedding-3-small", input=texts)
+    res = openai_client.embeddings.create(model=embedding_model_name, input=texts)
     return [d.embedding for d in res.data]
 
 
@@ -94,11 +98,11 @@ def milvus_search(query: str, k=5):
 # =====================
 from tiktoken import encoding_for_model
 
-def build_context_within_limit(filtered_docs, model_name: str, prompt: str, max_window: int=128000):
+def build_context_within_limit(filtered_docs, prompt: str, max_window: int=128000):
     """
     Concatenates documents until the total token count stays below the LLM context window.
     """
-    enc = encoding_for_model(model_name)
+    enc = encoding_for_model(llm_model_name)
     
     # Estimate token count for the static parts (prompt + question)
     base_tokens = len(enc.encode(prompt))
@@ -116,7 +120,6 @@ def build_context_within_limit(filtered_docs, model_name: str, prompt: str, max_
     return context_docs
 
 def run_chatbot(question: str, session_id: Optional[str] = None) -> Dict[str, Any]:
-    model_name = "gpt-4o-mini"
     if not question:
         return {"answer": "No question provided.", "sources": []}
 
@@ -139,15 +142,15 @@ Answer:"""
     scores = reranker.predict(pairs).tolist()
     reranked = sorted(zip(docs, scores), key=lambda x: x[1], reverse=True)
     # Keep only those above threshold
-    threshold = 0.7
+    threshold = 0.8
     filtered = [(d, s) for d, s in reranked if s > threshold]
-    top_docs = build_context_within_limit(filtered, model_name, prompt)
+    top_docs = build_context_within_limit(filtered, prompt)
 
     # Generate
     context = "\n\n".join([d["page_content"] for (d, _) in top_docs])
 
     completion = openai_client.chat.completions.create(
-        model=model_name,
+        model=llm_model_name,
         messages=[{"role": "user", "content": prompt.format(context=context, question=question)}],
         temperature=0.2,
     )

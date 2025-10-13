@@ -26,6 +26,18 @@ from openai import OpenAI
 import json, math
 from transformers import pipeline
 
+embedding_model_name = os.getenv("EMBEDDING_MODEL_NAME","text-embedding-3-small")
+llm_model_name = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
+cross_encoder_name_or_path=os.getenv("CROSS_ENCODER_NAME_OR_PATH", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+"""
+cross-encoder/ms-marco-MiniLM-L-6-v2
+cross-encoder/nli-deberta-v3-base
+cross-encoder/stsb-roberta-large
+cross-encoder/nli-roberta-base
+deepset/deberta-v3-base-squad2
+"""
+# Define collection schema
+collection_name = os.getenv("COLLECTION_NAME", "knowledge_base")
 
 # -------- CONFIG --------
 MAX_PAGES = 10000       # limit to avoid infinite crawl
@@ -34,86 +46,13 @@ WAIT_BETWEEN_REQUESTS = 1   # politeness: wait seconds between requests
 ALLOWED_DOMAINS = None      # restrict crawling (e.g., {"example.com"})
 # ------------------------
 
-google_search_api_key = os.getenv('GOOGLE_SEARCH_API_KEY')
-google_search_cse_id = os.getenv('GOOGLE_SEARCH_CSE_ID')
-
-PROMPT = """Your goal is to extract relevant texts from the given text based on the user's search query.
-
-<Start of text>
-{page_text}
-<End of text>
-
-<Start of search query>
-{query}
-<End of search query>
-
-Return <all texts relevant to search query or 'NO_RELEVANT_CONTENT'>
-"""
-
-EXTRACT_PROMPT = """You are a web content analyzer.
-
-Your goal is to extract only the parts of the page that are relevant to the user's search query.
-
-Search query:
-{query}
-
-Webpage content (HTML or plain text):
-{page_text}
-
-Instructions:
-- Ignore menus, headers, footers, cookie banners, and legal disclaimers.
-- Extract only the sentences or paragraphs that provide substantive information relevant to the search query.
-- Keep factual, descriptive, or analytical text.
-- Discard repetitive, navigational, or irrelevant content.
-- Return a clean block of plain text.
-- If the page is irrelevant, return "NO_RELEVANT_CONTENT".
-"""
-
-SELECT_LINKS_PROMPT = """You are a focused web crawler.
-
-Your task is to select which hyperlinks from a webpage should be followed next to find more information related to the user's search query.
-
-Search query:
-{query}
-
-Current page URL:
-{current_url}
-
-List of all links found on the page:
-{links_list}
-
-Instructions:
-- Choose only links that are likely to contain new or deeper content about the search query.
-- Prefer links with words like "report", "research", "article", "blog", "project", "details", "case study".
-- Avoid links to homepages, contacts, legal, privacy, ads, or unrelated services.
-- Return only absolute URLs that are relevant and likely to lead to new text content.
-
-Respond with a JSON array of selected links.
-- If no links are relevant, return an empty JSON array: [].
-"""
-
-"""from sentence_transformers import SentenceTransformer, util
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-
-def meaningful_cosine_similarity(sentence: str, query_emb) -> float:
-    sent_emb = embedding_model.encode(sentence, convert_to_tensor=True)
-    score = float(util.cos_sim(query_emb, sent_emb))
-    print(f"meaningful sentence: {sentence} score={score}")
-    return score"""
-
 client = OpenAI()
 
 embedding_model = client.embeddings.create(
-    model="text-embedding-3-small", input="test"
+    model=embedding_model_name, input="test"
 )
 embedding_dim = len(embedding_model.data[0].embedding)
-reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-12-v2")
-
-"""reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
-reranker = CrossEncoder("cross-encoder/nli-deberta-v3-base")
-reranker = CrossEncoder("cross-encoder/stsb-roberta-large")
-reranker = CrossEncoder("cross-encoder/nli-roberta-base")
-reranker = CrossEncoder("deepset/deberta-v3-base-squad2")"""
+reranker = CrossEncoder(cross_encoder_name_or_path)
 
 def meaningful_cosine_similarity(sentence:str, sent_emb, query_emb) -> float:
     # cosine similarity = dot(a, b) / (||a|| * ||b||)
@@ -210,7 +149,6 @@ def safe_json_loads(output: str):
 def llm_extract_factual_sentences_stream_overlap(
     text: str,
     query: str,
-    model="gpt-4o-mini",
     context_limit_tokens=16384,
     overlap_chars=500,
 ):
@@ -258,7 +196,7 @@ WEB PAGE TEXT:
 """
         try:
             response = client.chat.completions.create(
-                model=model,
+                model=llm_model_name,
                 messages=[
                     {"role": "system", "content": "You are a careful text cleaner and fact extractor."},
                     {"role": "user", "content": prompt},
@@ -349,23 +287,6 @@ Do not summarize or add commentary.
 
     return filtered_sentences
 
-def generate_links_via_google(query: str):
-    if not google_search_api_key or not google_search_cse_id:
-        print("Google Search API key or CSE ID not set.")
-        return []
-
-    search_url = "https://www.googleapis.com/customsearch/v1"
-    params = {
-        "key": google_search_api_key,
-        "cx": google_search_cse_id,
-        "q": query,
-        "num": 10,
-    }
-    response = requests.get(search_url, params=params)
-    data = response.json()
-    links = [item.get("link") for item in data.get("items", []) if item.get("link")]
-    return links
-
 def generate_links_via_llm(query: str):
     prompt = f"""
 You are a web research assistant.
@@ -407,8 +328,6 @@ milvus_port = int(os.getenv("MILVUS_PORT", "19530"))
 # 🔗 Connect to Milvus
 connections.connect("default", host=milvus_host, port=milvus_port)
 
-# Define collection schema
-collection_name = "knowledge_base"
 
 """from pymilvus import utility
 if utility.has_collection(collection_name):
@@ -423,6 +342,7 @@ fields = [
     FieldSchema(name="end", dtype=DataType.INT64),
     FieldSchema(name="url", dtype=DataType.VARCHAR, max_length=255),
 ]
+# add #fragment to url (ie. https://example.com/page.html#:~:text=Hello%20world)
 
 schema = CollectionSchema(fields, description="RAG document chunks")
 
@@ -514,9 +434,9 @@ Question: {question}
 Answer:"""
 
     answer = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=llm_model_name,
         messages=[
-            {"role": "user", "content": question}
+            {"role": "user", "content": prompt}
         ]
     )
 
@@ -538,7 +458,7 @@ def split(state: IngestState) -> IngestState:
     text = state["raw_text"]
     #s = sent_tokenize(text)
     query = "supply chain management"
-    filtered_chunks = llm_extract_factual_sentences_stream_overlap(text, query, model="gpt-4o-mini", context_limit_tokens=16384)
+    filtered_chunks = llm_extract_factual_sentences_stream_overlap(text, query, context_limit_tokens=16384)
 
     return {"raw_text": state["raw_text"], "chunks": filtered_chunks}
 
